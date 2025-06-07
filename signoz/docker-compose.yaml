@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  my-php-app:
+    image: php:8.2-latest
+    ports:
+      - "8080:80"  # Adjust port as per your application
+    volumes:
+      - ./path/to/your/php/code:/var/www/html  # Mount your PHP code into the container
+    environment:
+      - APP_NAME:"test"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    ports:
+      - "4317:4317"  # OTLP receiver port
+      - "55678:55678"  # Jaeger receiver port
+      - "9411:9411"  # Zipkin receiver port
+    volumes:
+      - ./otel-config.yaml:/etc/otel-collector-config.yaml
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+
+  signoz:
+    image: signoz/signoz:latest
+    ports:
+      - "16686:16686"  # Jaeger UI port
+      - "16687:16687"  # Signoz API port
+    environment:
+      - COLLECTOR_GRPC_PORT=55678
+      - COLLECTOR_HTTP_PORT=9411
