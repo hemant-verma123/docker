@@ -1,0 +1,32 @@
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - monitoring
+
+  alertmanager:
+    image: quay.io/prometheus/alertmanager
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - monitoring
+
+  promlens:
+    image: prom/promlens
+    container_name: promlens
+    ports:
+      - "8080:8080"
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge
