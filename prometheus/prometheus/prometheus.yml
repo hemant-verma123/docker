@@ -1,13 +1,17 @@
 global:
-  scrape_interval: 30s
-  scrape_timeout: 15s
+  scrape_interval: 180s
 
 scrape_configs:
-  - job_name: 'redfish_exporter'
-    scrape_timeout: 15s
-    metrics_path: /metrics
-    static_configs:
-      - targets:
-          - host.docker.internal:8000
-        labels:
-          instance: "redfish-localhost"
+  - job_name: redfish-fastapi
+    metrics_path: /probe
+    params:
+      target: []
+
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/redfish_targets.json  # path inside container or volume mount
+        refresh_interval: 5m
+
+    relabel_configs:
+      - source_labels: [__param_target]
+        target_label: target     
