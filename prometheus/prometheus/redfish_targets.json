@@ -1,32 +1,32 @@
 [
   {
-    "targets": ["172.31.101.151:9610"],
+    "targets": ["host.docker.internal:9610"],
     "labels": {
-      "__param_target": "172.31.101.151:8440"
+      "__param_target": "host.docker.internal:8440"
     }
   },
   {
-    "targets": ["172.31.101.151:9610"],
+    "targets": ["host.docker.internal:9610"],
     "labels": {
-      "__param_target": "172.31.101.151:8441"
+      "__param_target": "host.docker.internal:8441"
     }
   },
   {
-    "targets": ["172.31.101.151:9610"],
+    "targets": ["host.docker.internal:9610"],
     "labels": {
-      "__param_target": "172.31.101.151:8442"
+      "__param_target": "host.docker.internal:8442"
     }
   },
   {
-    "targets": ["172.31.101.151:9610"],
+    "targets": ["host.docker.internal:9610"],
     "labels": {
-      "__param_target": "172.31.101.151:8443"
+      "__param_target": "host.docker.internal:8443"
     }
   },
   {
-    "targets": ["172.31.101.151:9610"],
+    "targets": ["host.docker.internal:9610"],
     "labels": {
-      "__param_target": "172.31.101.151:8444"
+      "__param_target": "host.docker.internal:8444"
     }
   }
 ]

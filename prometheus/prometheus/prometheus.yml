@@ -10,7 +10,7 @@ scrape_configs:
     file_sd_configs:
       - files:
           - /etc/prometheus/redfish_targets.json  # path inside container or volume mount
-        refresh_interval: 5m
+        
 
     relabel_configs:
       - source_labels: [__param_target]
