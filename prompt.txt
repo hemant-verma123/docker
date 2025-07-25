@@ -1,0 +1,1 @@
+check all the services in docker-compose yml file, and check they must working, also update infra.xlsx with column (service,port,browser_url,terminal,remark), terminal = any services which can be accessed from terminal only or browser url if that UI is accessible from browser

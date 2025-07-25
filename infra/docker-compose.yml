@@ -1,0 +1,231 @@
+version: '3.8'
+
+services:
+
+  qdrant:
+    image: qdrant/qdrant
+    ports:
+      - "6333:6333"     # REST API
+      - "6334:6334"     # gRPC API
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+    networks:
+      - infra-network
+
+  # LocalStack Services (from docker-compose1.yml)
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack
+    ports:
+      - "4566:4566"
+      - "4571:4571"
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - DEFAULT_REGION=us-east-1
+    volumes:
+      - "./localstack:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - infra-network
+
+  minio-ui:
+    image: quay.io/minio/console:v0.29.0
+    container_name: minio-ui
+    ports:
+      - "9006:9001"
+    environment:
+      - MINIO_BROWSER_REDIRECT_URL=http://localhost:9006
+    networks:
+      - infra-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./minio/data:/data
+    networks:
+      - infra-network
+
+  # DynamoDB Services (from docker-compose2.yml)
+  dynamodb-local:
+    image: amazon/dynamodb-local
+    container_name: dynamodb-local
+    ports:
+      - "8083:8000"  # Use port 8083 externally to match admin expectation
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory -port 8000"
+    working_dir: /home/dynamodblocal
+    volumes:
+      - dynamodb_data:/home/dynamodblocal
+    networks:
+      - infra-network
+
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    container_name: dynamodb-admin
+    ports:
+      - "8002:8001"  # Map external 8002 to internal 8001
+    environment:
+      - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+    depends_on:
+      - dynamodb-local
+    networks:
+      - infra-network
+
+  mysql:
+    image: mysql
+    container_name: mysql
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_PASSWORD: 080589
+      MYSQL_ROOT_PASSWORD: 080589
+    volumes:
+      - ../php7/docker/dump:/docker-entrypoint-initdb.d
+      - persistent:/var/lib/mysql
+    networks:
+      - infra-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
+    ports:
+      - "8004:8004"  # Changed from 8002 to avoid conflict
+    environment:
+      MYSQL_PASSWORD: 080589
+      MYSQL_ROOT_PASSWORD: 080589
+    networks:
+      - infra-network
+
+  # SonarQube Services (from sonarcube/docker-compose.yml)
+  sonarqube:
+    container_name: sonarqube
+    image: sonarqube:latest
+    volumes:
+      - sonarqube_conf:/opt/sonarqube/conf
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_bundled-plugins:/opt/sonarqube/lib/bundled-plugins
+    ports:
+      - "9005:9000"
+    environment:
+      - sonar.jdbc.username=postgres
+      - sonar.jdbc.password=080589
+      - sonar.jdbc.url=jdbc:postgresql://postgres:5432/sonar
+    networks:
+      - infra-network
+
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 080589
+      POSTGRES_DB: sonar
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - infra-network
+
+  # PHP7 Application (from php7/docker-compose.yml)
+  www:
+    build: ../php7
+    container_name: www
+    depends_on:
+      - mysql
+    ports:
+      - "8003:80"  # Changed from 8001 to avoid conflict
+    volumes:
+      - ../php7:/var/www/html/
+    networks:
+      - infra-network
+    links:
+      - mysql:mysql
+
+  # Prometheus Services (from prometheus/docker-compose.yml)
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--log.level=debug'
+    networks:
+      - infra-network
+
+  alertmanager:
+    image: quay.io/prometheus/alertmanager
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - infra-network
+
+  promlens:
+    image: prom/promlens
+    container_name: promlens
+    ports:
+      - "8080:8080"
+    networks:
+      - infra-network
+
+  # Elastic Stack Services (from elastic-stack/docker-compose.yml)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+    networks:
+      - infra-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.10.0
+    container_name: logstash
+    volumes:
+      - ../elastic-stack/logstash/config:/usr/share/logstash/config
+    command: logstash -f /usr/share/logstash/config/logstash.conf
+    networks:
+      - infra-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.10.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - infra-network
+
+
+networks:
+  infra-network:
+    driver: bridge
+
+volumes:
+  localstack_data:
+  dynamodb_data:
+  persistent:
+  sonarqube_conf:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_bundled-plugins:
+  postgres_data:
