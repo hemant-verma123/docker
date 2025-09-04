@@ -27,7 +27,8 @@ case "$1" in
         echo "  • AlertManager: http://localhost:9093"
         echo "  • PromLens: http://localhost:8080"
         echo "  • Elasticsearch: http://localhost:9200"
-        echo "  • Kibana: http://localhost:5601"       
+        echo "  • Kibana: http://localhost:5601"
+        echo "  • Redis: localhost:6379"       
         ;;
     
     "stop"|"down")
@@ -121,6 +122,13 @@ case "$1" in
             echo "✅ Kibana (http://localhost:5601)"
         else
             echo "❌ Kibana (http://localhost:5601)"
+        fi
+        
+        # Redis
+        if redis-cli -h localhost -p 6379 ping > /dev/null 2>&1; then
+            echo "✅ Redis (localhost:6379)"
+        else
+            echo "❌ Redis (localhost:6379)"
         fi
         ;;
     
